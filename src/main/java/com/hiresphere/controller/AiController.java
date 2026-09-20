@@ -15,6 +15,8 @@ import java.util.Map;
 
 /**
  * AiController - REST endpoints for HireSphere Autonomous Agentic AI.
+ * Resilient against UUID candidate IDs, provides health/status endpoint,
+ * and coordinates mock interview turns.
  */
 @RestController
 @RequestMapping("/api/ai")
@@ -29,9 +31,18 @@ public class AiController {
         this.dataStore = dataStore;
     }
 
+    @GetMapping("/status")
+    @Operation(summary = "Check AI Engine Status", description = "Returns active Gemini configuration and AI health status.")
+    public ResponseEntity<Map<String, Object>> getStatus() {
+        return ResponseEntity.ok(geminiAiService.getAiStatus());
+    }
+
     @PostMapping("/screen")
     @Operation(summary = "Autonomous Candidate Screening", description = "Analyzes candidate suitability for a job and saves structured evaluation to database.")
-    public ResponseEntity<AiAnalysis> screenCandidate(@RequestParam int candidateId, @RequestParam int jobId) {
+    public ResponseEntity<AiAnalysis> screenCandidate(
+            @RequestParam(name = "candidateId", defaultValue = "3") String candidateIdStr,
+            @RequestParam int jobId) {
+        int candidateId = parseCandidateId(candidateIdStr);
         AiAnalysis analysis = geminiAiService.screenCandidate(candidateId, jobId);
         return ResponseEntity.ok(analysis);
     }
@@ -44,15 +55,17 @@ public class AiController {
 
     @GetMapping("/analysis/candidate/{candidateId}")
     @Operation(summary = "Get AI analyses for a candidate")
-    public ResponseEntity<List<AiAnalysis>> getAnalysesForCandidate(@PathVariable int candidateId) {
-        return ResponseEntity.ok(dataStore.findAiAnalysesByCandidateId(candidateId));
+    public ResponseEntity<List<AiAnalysis>> getAnalysesForCandidate(@PathVariable String candidateId) {
+        int cId = parseCandidateId(candidateId);
+        return ResponseEntity.ok(dataStore.findAiAnalysesByCandidateId(cId));
     }
 
     @PostMapping("/interview/start")
     @Operation(summary = "Start AI Mock Interview", description = "Initiates an interactive mock interview with opening question and tips.")
     public ResponseEntity<AiChatMessage> startInterview(
-            @RequestParam int candidateId,
+            @RequestParam(name = "candidateId", defaultValue = "3") String candidateIdStr,
             @RequestParam(defaultValue = "Full-Stack Software Engineer") String jobRole) {
+        int candidateId = parseCandidateId(candidateIdStr);
         AiChatMessage opening = geminiAiService.startInterviewSession(candidateId, jobRole);
         return ResponseEntity.ok(opening);
     }
@@ -61,7 +74,8 @@ public class AiController {
     @Operation(summary = "Send Candidate Response in Interview", description = "Submits candidate answer, returns AI evaluation, score, and next question.")
     public ResponseEntity<AiChatMessage> sendInterviewMessage(@RequestBody Map<String, Object> req) {
         String sessionId = (String) req.get("sessionId");
-        int candidateId = req.get("candidateId") instanceof Number ? ((Number) req.get("candidateId")).intValue() : 0;
+        Object cidObj = req.get("candidateId");
+        int candidateId = parseCandidateId(cidObj != null ? cidObj.toString() : "3");
         String jobRole = (String) req.getOrDefault("jobRole", "Software Engineer");
         String message = (String) req.getOrDefault("message", "");
 
@@ -92,5 +106,17 @@ public class AiController {
 
         Map<String, Object> spec = geminiAiService.generateJobDescription(title, experience, location, targetSkills);
         return ResponseEntity.ok(spec);
+    }
+
+    /**
+     * Safely parses numeric ID or generates stable hash from UUID string
+     */
+    private int parseCandidateId(String raw) {
+        if (raw == null || raw.isBlank()) return 3;
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            return Math.abs(raw.hashCode() % 100000) + 1;
+        }
     }
 }

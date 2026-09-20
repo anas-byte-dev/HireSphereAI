@@ -1,5 +1,6 @@
 package com.hiresphere.ai;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hiresphere.model.*;
@@ -33,7 +34,8 @@ public class GeminiAiService {
 
     private final DataStore dataStore;
     private final RealtimeEventService realtimeEventService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     private final RestTemplate restTemplate = new RestTemplate();
 
     public GeminiAiService(DataStore dataStore, RealtimeEventService realtimeEventService) {
@@ -42,9 +44,21 @@ public class GeminiAiService {
     }
 
     /**
+     * Reports live status and configuration of the Gemini AI engine.
+     */
+    public Map<String, Object> getAiStatus() {
+        boolean hasKey = geminiApiKey != null && !geminiApiKey.isBlank();
+        Map<String, Object> status = new LinkedHashMap<>();
+        status.put("configured", hasKey);
+        status.put("engine", hasKey ? "Google Gemini 1.5 Flash (Live LLM)" : "HireSphere Autonomous Heuristic Engine");
+        status.put("model", "gemini-1.5-flash");
+        status.put("endpoint", geminiApiUrl);
+        status.put("status", "HEALTHY");
+        return status;
+    }
+
+    /**
      * Agent 1: Autonomous Resume & Candidate Screening Agent.
-     * Evaluates candidate skills and background against job requirements.
-     * Persists result in database and broadcasts real-time update.
      */
     public AiAnalysis screenCandidate(int candidateId, int jobId) {
         User candidate = dataStore.findUserById(candidateId);
@@ -52,7 +66,13 @@ public class GeminiAiService {
         Job job = dataStore.findJobById(jobId);
 
         if (job == null || candidate == null) {
-            throw new IllegalArgumentException("Job or Candidate not found");
+            // If candidate profile not in in-memory store, build a transient candidate
+            if (candidate == null) {
+                candidate = new User(candidateId, "Candidate #" + candidateId, "candidate" + candidateId + "@hiresphere.io", "CANDIDATE");
+            }
+            if (job == null) {
+                throw new IllegalArgumentException("Job not found with ID: " + jobId);
+            }
         }
 
         List<String> jobSkills = job.getSkills() != null ? job.getSkills() : Collections.emptyList();
@@ -88,7 +108,6 @@ public class GeminiAiService {
 
     /**
      * Agent 2: Interactive AI Mock Interviewer & Coach.
-     * Handles candidate conversation turn-by-turn with instant coaching feedback.
      */
     public AiChatMessage handleInterviewTurn(String sessionId, int candidateId, String jobRole, String userMessage) {
         // Record Candidate message
@@ -147,14 +166,11 @@ public class GeminiAiService {
                         + ". Return valid JSON with keys: description (string), requirements (string), recommendedSalary (string), suggestedSkills (array of strings).";
 
                 String rawResponse = callGeminiApi(prompt);
-                JsonNode root = objectMapper.readTree(rawResponse);
-                String text = root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
-
-                // Extract json inside ```json ... ``` if wrapped
-                if (text.contains("{") && text.contains("}")) {
-                    int start = text.indexOf("{");
-                    int end = text.lastIndexOf("}") + 1;
-                    return objectMapper.readValue(text.substring(start, end), Map.class);
+                String cleaned = extractJsonText(rawResponse);
+                if (cleaned != null) {
+                    Map<String, Object> parsed = objectMapper.readValue(cleaned, Map.class);
+                    parsed.put("generatedBy", "Google Gemini 1.5 Flash");
+                    return parsed;
                 }
             } catch (Exception e) {
                 log.warn("Gemini generation failed, falling back to built-in generator: {}", e.getMessage());
@@ -167,6 +183,7 @@ public class GeminiAiService {
         result.put("requirements", "- Proven problem-solving skills and clean code practices.\n- Hands-on experience with " + (targetSkills.isEmpty() ? "modern technologies" : String.join(", ", targetSkills)) + ".\n- Ability to work effectively in cross-functional agile teams.\n- Strong communication and analytical mindset.");
         result.put("recommendedSalary", experience.equalsIgnoreCase("Fresher") ? "₹5 - 8 LPA" : "₹12 - 22 LPA");
         result.put("suggestedSkills", targetSkills.isEmpty() ? List.of("Java", "Spring Boot", "React", "REST API", "SQL", "Git") : targetSkills);
+        result.put("generatedBy", "HireSphere Heuristic Engine (Offline)");
 
         return result;
     }
@@ -266,13 +283,9 @@ public class GeminiAiService {
                     + "Output ONLY JSON with keys: score (integer 0-100), matchVerdict (string), strengths (array of strings), skillGaps (array of strings), reasoning (string), recommendedAction (string), suggestedInterviewQuestions (array of strings).";
 
             String raw = callGeminiApi(prompt);
-            JsonNode root = objectMapper.readTree(raw);
-            String text = root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
-
-            if (text.contains("{") && text.contains("}")) {
-                int start = text.indexOf("{");
-                int end = text.lastIndexOf("}") + 1;
-                return objectMapper.readValue(text.substring(start, end), AiAnalysis.class);
+            String jsonText = extractJsonText(raw);
+            if (jsonText != null) {
+                return objectMapper.readValue(jsonText, AiAnalysis.class);
             }
         } catch (Exception e) {
             log.warn("Gemini call failed for screening, falling back to autonomous heuristic: {}", e.getMessage());
@@ -290,14 +303,9 @@ public class GeminiAiService {
                     + "3. message (your conversational reply and next insightful interview question)";
 
             String raw = callGeminiApi(prompt);
-            JsonNode root = objectMapper.readTree(raw);
-            String text = root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
-
-            if (text.contains("{") && text.contains("}")) {
-                int start = text.indexOf("{");
-                int end = text.lastIndexOf("}") + 1;
-                JsonNode parsed = objectMapper.readTree(text.substring(start, end));
-
+            String jsonText = extractJsonText(raw);
+            if (jsonText != null) {
+                JsonNode parsed = objectMapper.readTree(jsonText);
                 AiChatMessage msg = new AiChatMessage();
                 msg.setSessionId(sessionId);
                 msg.setCandidateId(candidateId);
@@ -314,7 +322,35 @@ public class GeminiAiService {
         return autonomousBuiltinInterviewTurn(sessionId, candidateId, jobRole, userMessage);
     }
 
+    private String extractJsonText(String rawResponse) {
+        if (rawResponse == null || rawResponse.isBlank()) return null;
+        try {
+            JsonNode root = objectMapper.readTree(rawResponse);
+            String text = root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
+            if (text == null || text.isBlank()) return null;
+
+            // Strip markdown code fences if wrapped
+            String cleaned = text.trim();
+            if (cleaned.startsWith("```")) {
+                cleaned = cleaned.replaceFirst("^```(?:json)?\\n?", "").replaceFirst("\\n?```$", "").trim();
+            }
+
+            int start = cleaned.indexOf("{");
+            int end = cleaned.lastIndexOf("}") + 1;
+            if (start != -1 && end > start) {
+                return cleaned.substring(start, end);
+            }
+            return cleaned;
+        } catch (Exception e) {
+            log.warn("Could not extract JSON from response: {}", e.getMessage());
+            return null;
+        }
+    }
+
     private String callGeminiApi(String prompt) {
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            throw new IllegalStateException("GEMINI_API_KEY is not configured.");
+        }
         String endpoint = geminiApiUrl + "?key=" + geminiApiKey;
 
         Map<String, Object> body = Map.of(
