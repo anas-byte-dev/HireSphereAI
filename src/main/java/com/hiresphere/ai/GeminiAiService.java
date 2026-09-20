@@ -68,7 +68,8 @@ public class GeminiAiService {
         if (job == null || candidate == null) {
             // If candidate profile not in in-memory store, build a transient candidate
             if (candidate == null) {
-                candidate = new User(candidateId, "Candidate #" + candidateId, "candidate" + candidateId + "@hiresphere.io", "CANDIDATE");
+                candidate = new User("Candidate #" + candidateId, "candidate" + candidateId + "@hiresphere.io", "", "CANDIDATE");
+                candidate.setId(candidateId);
             }
             if (job == null) {
                 throw new IllegalArgumentException("Job not found with ID: " + jobId);
