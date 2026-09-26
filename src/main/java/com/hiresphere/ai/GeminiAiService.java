@@ -261,9 +261,16 @@ public class GeminiAiService {
         String nextQuestion;
 
         String lower = userMessage.toLowerCase();
-        boolean isTopicQuery = lower.contains("oop") || lower.contains("object oriented") || lower.contains("java") || lower.contains("what is") || lower.contains("explain") || lower.contains("tell me");
+        boolean isHelpQuery = lower.contains("don't know") || lower.contains("dont know") || lower.contains("idk") || lower.contains("not sure") || lower.contains("hint") || lower.contains("help me") || lower.contains("skip");
+        boolean isTopicQuery = isHelpQuery || lower.contains("oop") || lower.contains("object oriented") || lower.contains("java") || lower.contains("thread") || lower.contains("concurrency") || lower.contains("collection") || lower.contains("hashmap") || lower.contains("spring") || lower.contains("rest") || lower.contains("microservice") || lower.contains("database") || lower.contains("sql") || lower.contains("react") || lower.contains("what is") || lower.contains("explain") || lower.contains("tell me");
 
-        if (lower.contains("oop") || lower.contains("object oriented") || (lower.contains("java") && (lower.contains("all") || lower.contains("thing") || lower.contains("concept")))) {
+        if (isHelpQuery) {
+            feedback = "Tip: When stuck, think out loud! Interviewers appreciate seeing your reasoning and problem-solving process even if you don't recall exact syntax.";
+            nextQuestion = "No worries at all! That is completely normal—interviews are collaborative learning conversations.\n\n"
+                    + "When you encounter an unfamiliar concept in a real interview, the best approach is to talk through what you do know or share how you would research and diagnose it.\n\n"
+                    + "Let's reset and explore from a practical angle: Could you tell me about a feature or project you enjoyed building recently, and what role your core programming language played in it?";
+            msg.setScore(85);
+        } else if (lower.contains("oop") || lower.contains("object oriented") || (lower.contains("java") && (lower.contains("all") || lower.contains("thing") || lower.contains("concept")))) {
             feedback = "Tip: When answering OOP questions in Java interviews, always state all 4 core pillars upfront and give a quick 1-line real-world analogy for each.";
             nextQuestion = "Object-Oriented Programming (OOP) in Java is built on four core pillars:\n\n"
                     + "1. Encapsulation: Bundling data (variables) and methods inside a class, keeping fields private and exposing them via public getters/setters to protect state.\n"
@@ -271,6 +278,31 @@ public class GeminiAiService {
                     + "3. Polymorphism: Performing a single action in different ways—either compile-time (method overloading) or runtime (method overriding using dynamic dispatch).\n"
                     + "4. Abstraction: Hiding internal implementation details and exposing only essential interfaces using abstract classes and interfaces.\n\n"
                     + "Which of these four pillars have you worked with most in your projects, or would you like to walk through a quick example of Polymorphism in Java?";
+            msg.setScore(88);
+        } else if (lower.contains("thread") || lower.contains("concurrency") || lower.contains("synchroniz") || lower.contains("multithread")) {
+            feedback = "Tip: In concurrency questions, always emphasize thread safety, race conditions, and why modern systems favor thread pools like ExecutorService over raw threads.";
+            nextQuestion = "Multithreading and Concurrency in Java allow applications to execute multiple tasks simultaneously to maximize CPU utilization:\n\n"
+                    + "1. Thread Creation: Extending Thread or implementing Runnable / Callable.\n"
+                    + "2. Synchronization: Using synchronized methods or blocks to prevent race conditions on shared mutable state.\n"
+                    + "3. Volatile Keyword: Ensuring variable visibility directly from main memory.\n"
+                    + "4. Concurrency Utilities: Modern Java uses ExecutorService, CompletableFuture, and ConcurrentHashMap rather than manual thread management.\n\n"
+                    + "Have you worked with thread safety, synchronization, or thread pools like ExecutorService in any of your applications?";
+            msg.setScore(88);
+        } else if (lower.contains("collection") || lower.contains("hashmap") || lower.contains("arraylist") || lower.contains("list") || lower.contains("map")) {
+            feedback = "Tip: Memorize time complexity (O(1) lookup for HashMap, O(n) worst-case collision) and discuss how Java 8+ converts high-collision buckets into red-black trees.";
+            nextQuestion = "The Java Collections Framework provides standardized data structures for managing groups of objects:\n\n"
+                    + "1. List (e.g. ArrayList vs LinkedList): Ordered collections with index-based access.\n"
+                    + "2. Set (e.g. HashSet, TreeSet): Collections guaranteeing uniqueness without duplicate elements.\n"
+                    + "3. Map (e.g. HashMap, ConcurrentHashMap): Key-value pairs with O(1) average lookup using hashing.\n\n"
+                    + "How do you decide between an ArrayList and a LinkedList, or how would you handle hash collisions in a custom Map?";
+            msg.setScore(88);
+        } else if (lower.contains("spring") || lower.contains("boot") || lower.contains("dependency injection") || lower.contains("ioc")) {
+            feedback = "Tip: Emphasize that constructor injection enables immutability (final fields), easier unit testing with mock objects, and prevents hidden circular dependencies.";
+            nextQuestion = "Spring Boot simplifies enterprise Java development through conventions and dependency management:\n\n"
+                    + "1. Inversion of Control (IoC): The Spring IoC container manages the lifecycle and assembly of Beans.\n"
+                    + "2. Dependency Injection (DI): Components declare dependencies (via constructor or field injection) rather than instantiating them directly.\n"
+                    + "3. Auto-Configuration: @SpringBootApplication automatically configures beans based on classpath dependencies.\n\n"
+                    + "Why is constructor-based dependency injection generally preferred over field injection with @Autowired in modern Spring applications?";
             msg.setScore(88);
         } else if (lower.contains("database") || lower.contains("sql") || lower.contains("query")) {
             feedback = "Strong direction on data management. Quantify performance metrics like query execution time and index cardinality.";
