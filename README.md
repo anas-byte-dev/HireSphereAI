@@ -20,7 +20,6 @@ HireSphere AI Backend is an enterprise-grade RESTful API service built on **Spri
 | **Interactive API Docs** | Springdoc OpenAPI / Swagger UI | **[https://hiresphereai.onrender.com/swagger-ui.html](https://hiresphereai.onrender.com/swagger-ui.html)** | `http://localhost:8085/swagger-ui.html` | Interactive Swagger test chamber |
 | **Live Event Stream** | Server-Sent Events (SSE) | **[https://hiresphereai.onrender.com/api/realtime/stream](https://hiresphereai.onrender.com/api/realtime/stream)** | `http://localhost:8085/api/realtime/stream` | Event bus pushing DB mutations |
 | **H2 Database Console** | Embedded Web Console | **[https://hiresphereai.onrender.com/h2-console](https://hiresphereai.onrender.com/h2-console)** | `http://localhost:8085/h2-console` | Direct SQL inspection console (`sa` / empty password) |
-| **Agentic AI Engine** | Google Gemini 3.1 + Heuristics | **[https://hiresphereai.onrender.com/api/ai/*](https://hiresphereai.onrender.com/api/ai/status)** | `/api/ai/*` | Autonomous screening & coaching engine |
 | **Frontend Web App** | React 19 + Vite 8 | **[https://hire-sphere-ai-front-end.vercel.app](https://hire-sphere-ai-front-end.vercel.app)** | `http://localhost:5175` | Production Single Page Application |
 
 ---
@@ -79,7 +78,7 @@ backend/hiresphere-backend/
 ├── Dockerfile                               # Multi-stage production container build
 ├── pom.xml                                  # Maven dependencies & plugins
 ├── mvnw & mvnw.cmd                          # Maven wrapper binaries
-└── .env                                     # Environment configuration
+└── .env.example                             # Environment template (NO SECRETS)
 ```
 
 ---
@@ -148,7 +147,9 @@ docker run -p 8085:8085 -e SERVER_PORT=8085 hiresphere-backend
 
 ---
 
-## ⚙️ Environment Configuration (`.env`)
+## ⚙️ Environment Configuration (`.env.example`)
+
+Create a `.env` file from the clean template below:
 
 ```env
 SERVER_PORT=8085
@@ -163,7 +164,7 @@ H2_CONSOLE_PATH=/h2-console
 DATA_FILE_PATH=./data/hiresphere_realtime_db.json
 
 # Gemini AI (Optional - uses built-in autonomous agent if omitted)
-GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-3.1-flash-lite
 GEMINI_API_URL=https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent
 
@@ -174,13 +175,13 @@ CORS_ALLOWED_ORIGINS=http://localhost:5175,http://127.0.0.1:5175,https://hire-sp
 
 ---
 
-## 🔑 Pre-Seeded Test Accounts
+## 🔑 Demo Test Accounts
 
 | Role | Email | Password |
 | :--- | :--- | :--- |
-| **Candidate** | `alice@example.com` | `candidate123` |
-| **Recruiter** | `recruiter@techcorp.com` | `recruiter123` |
-| **Admin** | `admin@hiresphere.ai` | `admin123` |
+| **Candidate** | `candidate@example.com` | `candidate123` |
+| **Recruiter** | `recruiter@example.com` | `recruiter123` |
+| **Admin** | `admin@example.com` | `admin123` |
 
 ---
 
