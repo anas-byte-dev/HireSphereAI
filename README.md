@@ -5,22 +5,21 @@
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-3.1_Flash_Lite-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![Render](https://img.shields.io/badge/Deployed-Render-46E3B7?logo=render&logoColor=white)](https://hiresphereai.onrender.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 HireSphere AI Backend is an enterprise-grade RESTful API service built on **Spring Boot 3.2.5**, **Java 17**, and **Server-Sent Events (SSE)**. It provides autonomous candidate screening, interactive mock interview evaluation, persistent disk DBMS storage, and zero-latency event broadcasting.
 
 ---
 
-## 🌐 Cloud Production Endpoints
+## 🌐 Deployment Endpoints
 
 | Component | Technology | Cloud Production URL | Local Dev Address | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **Backend REST API** | Spring Boot 3.2.5 (Java 17) | **[https://hiresphereai.onrender.com/api](https://hiresphereai.onrender.com/api)** | `http://localhost:8085/api` | Primary REST API gateway |
-| **Interactive API Docs** | Springdoc OpenAPI / Swagger UI | **[https://hiresphereai.onrender.com/swagger-ui.html](https://hiresphereai.onrender.com/swagger-ui.html)** | `http://localhost:8085/swagger-ui.html` | Interactive Swagger test chamber |
-| **Live Event Stream** | Server-Sent Events (SSE) | **[https://hiresphereai.onrender.com/api/realtime/stream](https://hiresphereai.onrender.com/api/realtime/stream)** | `http://localhost:8085/api/realtime/stream` | Event bus pushing DB mutations |
-| **H2 Database Console** | Embedded Web Console | **[https://hiresphereai.onrender.com/h2-console](https://hiresphereai.onrender.com/h2-console)** | `http://localhost:8085/h2-console` | Direct SQL inspection console (`sa` / empty password) |
-| **Frontend Web App** | React 19 + Vite 8 | **[https://hire-sphere-ai-front-end.vercel.app](https://hire-sphere-ai-front-end.vercel.app)** | `http://localhost:5175` | Production Single Page Application |
+| **Backend REST API** | Spring Boot 3.2.5 (Java 17) | `https://<your-backend-domain>.onrender.com/api` | `http://localhost:8085/api` | Primary REST API gateway |
+| **Interactive API Docs** | Swagger UI | `https://<your-backend-domain>.onrender.com/swagger-ui.html` | `http://localhost:8085/swagger-ui.html` | Interactive Swagger test chamber |
+| **Live Event Stream** | Server-Sent Events (SSE) | `https://<your-backend-domain>.onrender.com/api/realtime/stream` | `http://localhost:8085/api/realtime/stream` | Event bus pushing DB mutations |
+| **H2 Database Console** | Embedded Web Console | `https://<your-backend-domain>.onrender.com/h2-console` | `http://localhost:8085/h2-console` | Direct SQL inspection console (`sa` / empty password) |
+| **Frontend Web App** | React 19 + Vite 8 | `https://<your-frontend-domain>.vercel.app` | `http://localhost:5175` | Production Single Page Application |
 
 ---
 
@@ -78,7 +77,7 @@ backend/hiresphere-backend/
 ├── Dockerfile                               # Multi-stage production container build
 ├── pom.xml                                  # Maven dependencies & plugins
 ├── mvnw & mvnw.cmd                          # Maven wrapper binaries
-└── .env.example                             # Environment template (NO SECRETS)
+└── .env.example                             # Environment template (Zero secrets)
 ```
 
 ---
@@ -124,7 +123,7 @@ All platform transactions persist permanently to disk:
 ### Build & Run
 ```bash
 # 1. Clone repository
-git clone https://github.com/anas-byte-dev/HireSphereAI.git
+git clone https://github.com/<your-username>/HireSphereAI.git
 cd HireSphereAI/backend/hiresphere-backend
 
 # 2. Compile and package application
@@ -170,7 +169,7 @@ GEMINI_API_URL=https://generativelanguage.googleapis.com/v1beta/models/gemini-3.
 
 # Real-Time & Security
 REALTIME_STREAM_PATH=/api/realtime/stream
-CORS_ALLOWED_ORIGINS=http://localhost:5175,http://127.0.0.1:5175,https://hire-sphere-ai-front-end.vercel.app,https://*.vercel.app
+CORS_ALLOWED_ORIGINS=http://localhost:5175,http://127.0.0.1:5175
 ```
 
 ---
