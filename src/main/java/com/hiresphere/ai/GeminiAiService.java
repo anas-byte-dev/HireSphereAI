@@ -29,7 +29,7 @@ public class GeminiAiService {
     @Value("${gemini.api.key:}")
     private String geminiApiKey;
 
-    @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent}")
+    @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent}")
     private String geminiApiUrl;
 
     private final DataStore dataStore;
@@ -50,8 +50,8 @@ public class GeminiAiService {
         boolean hasKey = geminiApiKey != null && !geminiApiKey.isBlank();
         Map<String, Object> status = new LinkedHashMap<>();
         status.put("configured", hasKey);
-        status.put("engine", hasKey ? "Google Gemini 1.5 Flash (Live LLM)" : "HireSphere Autonomous Heuristic Engine");
-        status.put("model", "gemini-1.5-flash");
+        status.put("engine", hasKey ? "Google Gemini 3.1 Flash (Live LLM)" : "HireSphere Autonomous Heuristic Engine");
+        status.put("model", "gemini-3.1-flash-lite");
         status.put("endpoint", geminiApiUrl);
         status.put("status", "HEALTHY");
         return status;
@@ -260,10 +260,17 @@ public class GeminiAiService {
         String feedback;
         String nextQuestion;
 
-        if (wordCount < 10) {
+        String lower = userMessage.toLowerCase();
+        if (lower.contains("oop") || lower.contains("object oriented")) {
+            feedback = "Good focus on OOP principles. Frame your answers around real-world design patterns and tradeoffs rather than just listing terms.";
+            nextQuestion = "Object-Oriented Programming provides essential structure for maintainable code. Could you explain how you would use Polymorphism to design an extensible payment processing module supporting both Credit Cards and PayPal without altering core checkout logic?";
+        } else if (lower.contains("database") || lower.contains("sql") || lower.contains("query")) {
+            feedback = "Strong direction on data management. Quantify performance metrics like query execution time and index cardinality.";
+            nextQuestion = "Under high concurrency, how would you diagnose and resolve a slow query that causes connection pool exhaustion in production?";
+        } else if (wordCount < 10) {
             feedback = "Your answer was very concise. Try expanding with specific technical decisions and outcomes using concrete examples.";
-            nextQuestion = "Can you elaborate on the architecture of that solution? What tradeoffs did you consider?";
-        } else if (userMessage.toLowerCase().contains("challenge") || userMessage.toLowerCase().contains("problem") || userMessage.toLowerCase().contains("bug")) {
+            nextQuestion = "To dive deeper into your technical experience: Can you walk me through the architecture of a complex feature you built and the key tradeoffs you evaluated?";
+        } else if (lower.contains("challenge") || lower.contains("problem") || lower.contains("bug")) {
             feedback = "Great problem-solving narrative! You clearly highlighted the complication and how you addressed it.";
             nextQuestion = "Excellent. Now switching gears to scalability: If your application experienced a 10x traffic surge tomorrow, which component would bottleneck first and how would you optimize it?";
         } else {
@@ -296,12 +303,20 @@ public class GeminiAiService {
 
     private AiChatMessage callGeminiForInterviewTurn(String sessionId, int candidateId, String jobRole, String userMessage) {
         try {
-            String prompt = "You are a senior hiring manager conducting an interactive technical mock interview for a '" + jobRole + "' position.\n"
-                    + "The candidate just said: \"" + userMessage + "\"\n"
-                    + "Respond in strict JSON with keys:\n"
-                    + "1. score (integer 0-100 rating their answer)\n"
-                    + "2. feedback (1-2 sentences of constructive coaching tip)\n"
-                    + "3. message (your conversational reply and next insightful interview question)";
+            String prompt = "You are a friendly, distinguished Principal Engineer and Technical Hiring Manager conducting an interactive technical mock interview for the position: '" + jobRole + "'.\n\n"
+                    + "Candidate just said: \"" + userMessage + "\"\n\n"
+                    + "Interview Guidelines:\n"
+                    + "1. Act as a real, conversational, and highly knowledgeable interviewer.\n"
+                    + "2. If candidate's response is brief, mentions a concept (e.g. OOPs, databases, multithreading), or asks a question, adapt naturally: explain the key concept briefly and ask a practical, scenario-based interview question.\n"
+                    + "3. If candidate gives a thorough answer, evaluate their technical depth and follow up with a deeper architectural scenario.\n"
+                    + "4. Never repeat previous questions or generic canned phrases.\n"
+                    + "5. Provide a constructive coach feedback tip with concrete advice.\n\n"
+                    + "Respond in strict JSON with ONLY keys:\n"
+                    + "{\n"
+                    + "  \"score\": 85,\n"
+                    + "  \"feedback\": \"1-2 constructive coaching tips\",\n"
+                    + "  \"message\": \"Your conversational reply and next insightful interview question\"\n"
+                    + "}";
 
             String raw = callGeminiApi(prompt);
             String jsonText = extractJsonText(raw);
@@ -327,13 +342,27 @@ public class GeminiAiService {
         if (rawResponse == null || rawResponse.isBlank()) return null;
         try {
             JsonNode root = objectMapper.readTree(rawResponse);
-            String text = root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
+            JsonNode candidates = root.path("candidates");
+            if (!candidates.isArray() || candidates.isEmpty()) return null;
+            JsonNode parts = candidates.get(0).path("content").path("parts");
+            if (!parts.isArray() || parts.isEmpty()) return null;
+
+            String text = null;
+            for (JsonNode part : parts) {
+                if (part.hasNonNull("text") && !part.path("thought").asBoolean(false)) {
+                    text = part.path("text").asText();
+                    break;
+                }
+            }
+            if (text == null && parts.get(0).hasNonNull("text")) {
+                text = parts.get(0).path("text").asText();
+            }
             if (text == null || text.isBlank()) return null;
 
             // Strip markdown code fences if wrapped
             String cleaned = text.trim();
             if (cleaned.startsWith("```")) {
-                cleaned = cleaned.replaceFirst("^```(?:json)?\\n?", "").replaceFirst("\\n?```$", "").trim();
+                cleaned = cleaned.replaceFirst("^```(?:json)?\\r?\\n?", "").replaceFirst("\\r?\\n?```$", "").trim();
             }
 
             int start = cleaned.indexOf("{");
