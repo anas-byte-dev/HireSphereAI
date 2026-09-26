@@ -261,13 +261,21 @@ public class GeminiAiService {
         String nextQuestion;
 
         String lower = userMessage.toLowerCase();
-        if (lower.contains("oop") || lower.contains("object oriented")) {
-            feedback = "Good focus on OOP principles. Frame your answers around real-world design patterns and tradeoffs rather than just listing terms.";
-            nextQuestion = "Object-Oriented Programming provides essential structure for maintainable code. Could you explain how you would use Polymorphism to design an extensible payment processing module supporting both Credit Cards and PayPal without altering core checkout logic?";
+        boolean isTopicQuery = lower.contains("oop") || lower.contains("object oriented") || lower.contains("java") || lower.contains("what is") || lower.contains("explain") || lower.contains("tell me");
+
+        if (lower.contains("oop") || lower.contains("object oriented") || (lower.contains("java") && (lower.contains("all") || lower.contains("thing") || lower.contains("concept")))) {
+            feedback = "Tip: When answering OOP questions in Java interviews, always state all 4 core pillars upfront and give a quick 1-line real-world analogy for each.";
+            nextQuestion = "Object-Oriented Programming (OOP) in Java is built on four core pillars:\n\n"
+                    + "1. Encapsulation: Bundling data (variables) and methods inside a class, keeping fields private and exposing them via public getters/setters to protect state.\n"
+                    + "2. Inheritance: Allowing a subclass to inherit fields and methods from a superclass using 'extends' to promote code reuse.\n"
+                    + "3. Polymorphism: Performing a single action in different ways—either compile-time (method overloading) or runtime (method overriding using dynamic dispatch).\n"
+                    + "4. Abstraction: Hiding internal implementation details and exposing only essential interfaces using abstract classes and interfaces.\n\n"
+                    + "Which of these four pillars have you worked with most in your projects, or would you like to walk through a quick example of Polymorphism in Java?";
+            msg.setScore(88);
         } else if (lower.contains("database") || lower.contains("sql") || lower.contains("query")) {
             feedback = "Strong direction on data management. Quantify performance metrics like query execution time and index cardinality.";
             nextQuestion = "Under high concurrency, how would you diagnose and resolve a slow query that causes connection pool exhaustion in production?";
-        } else if (wordCount < 10) {
+        } else if (!isTopicQuery && wordCount < 10) {
             feedback = "Your answer was very concise. Try expanding with specific technical decisions and outcomes using concrete examples.";
             nextQuestion = "To dive deeper into your technical experience: Can you walk me through the architecture of a complex feature you built and the key tradeoffs you evaluated?";
         } else if (lower.contains("challenge") || lower.contains("problem") || lower.contains("bug")) {
@@ -303,19 +311,18 @@ public class GeminiAiService {
 
     private AiChatMessage callGeminiForInterviewTurn(String sessionId, int candidateId, String jobRole, String userMessage) {
         try {
-            String prompt = "You are a friendly, distinguished Principal Engineer and Technical Hiring Manager conducting an interactive technical mock interview for the position: '" + jobRole + "'.\n\n"
+            String prompt = "You are a supportive, knowledgeable Principal Engineer and AI Interview Coach conducting an interactive technical mock interview for the position: '" + jobRole + "'.\n\n"
                     + "Candidate just said: \"" + userMessage + "\"\n\n"
                     + "Interview Guidelines:\n"
-                    + "1. Act as a real, conversational, and highly knowledgeable interviewer.\n"
-                    + "2. If candidate's response is brief, mentions a concept (e.g. OOPs, databases, multithreading), or asks a question, adapt naturally: explain the key concept briefly and ask a practical, scenario-based interview question.\n"
-                    + "3. If candidate gives a thorough answer, evaluate their technical depth and follow up with a deeper architectural scenario.\n"
-                    + "4. Never repeat previous questions or generic canned phrases.\n"
-                    + "5. Provide a constructive coach feedback tip with concrete advice.\n\n"
+                    + "1. TOPIC EXPLORATION & TEACHING: If the candidate mentions a topic to explore, asks a question, or requests concepts (e.g. 'opps all things of java', 'tell me about OOP', 'explain microservices'), DIRECTLY EXPLAIN the core concepts clearly with formatted bullet points (e.g. for OOP in Java, clearly break down the 4 pillars: Encapsulation, Inheritance, Polymorphism, Abstraction), then ask a gentle, engaging follow-up question on that topic. Set score to an encouraging 85-92 and provide a high-value interview coaching tip.\n"
+                    + "2. CANDIDATE ANSWERS: Positively acknowledge what was correct. If brief, guide them with a focused follow-up instead of criticizing. If detailed, validate and explore a realistic tradeoff.\n"
+                    + "3. IF STUCK: Be supportive, explain the concept simply, and ask an easier question.\n"
+                    + "4. TONE: Warm, mentor-like, encouraging. Never ask overwhelming enterprise riddles when discussing fundamentals.\n\n"
                     + "Respond in strict JSON with ONLY keys:\n"
                     + "{\n"
-                    + "  \"score\": 85,\n"
-                    + "  \"feedback\": \"1-2 constructive coaching tips\",\n"
-                    + "  \"message\": \"Your conversational reply and next insightful interview question\"\n"
+                    + "  \"score\": 88,\n"
+                    + "  \"feedback\": \"1-2 constructive, encouraging coaching tips\",\n"
+                    + "  \"message\": \"Your clear conversational explanation followed by the next accessible interview question\"\n"
                     + "}";
 
             String raw = callGeminiApi(prompt);
