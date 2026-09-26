@@ -12,3 +12,9 @@ data/*.trace.db
 .DS_Store
 Thumbs.db
 .env
+*.env
+PROJECT_MASTERY_INTERVIEW_GUIDE/
+*private*
+*PRIVATE*
+SRS_DOCUMENT.md
+ARCHITECTURE_AND_WORKFLOW.md
